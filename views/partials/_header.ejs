@@ -20,15 +20,21 @@
     </div>
     <form class="form-inline" action="/login" method="POST">
       <div class="form-group mb-2">
+        <% if (username) { %>
+          <p style="margin-top: 5px; margin-bottom: 0px">Logged in as: <%= username %></p>
+          <button type="submit" class="btn btn-primary" style="margin-left: 10px">Logout</button>
+        <% } else { %>
         <input
           class="form-control"
           type="text"
           name="username"
           placeholder="Username"
-          style="width: 250px;"
+          style="width: 250px; margin-right: 10px"
         />
         <button type="submit" class="btn btn-primary">Login</button>
+        <% } %>
       </div>
     </form>
+
   </nav>
 </header>
