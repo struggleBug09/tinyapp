@@ -64,6 +64,9 @@ app.get("/urls/new", (req, res) => {
     users: req.cookies["users"],
     user: user
   };
+  if (typeof user == "undefined") {
+    res.redirect("/login");
+  }
   res.render("urls_new", templateVars);
 });
 
@@ -71,6 +74,9 @@ app.post("/urls", (req, res) => {
   const id = generateRandomString();
   const longURL = req.body.longURL;
   urlDatabase[id] = longURL;
+  if (typeof user == "undefined") {
+    return res.status(401).send("<h1>Please login to shorten URLs</h1>");
+  }
   res.redirect(`/urls/${id}`);
 });
 
@@ -129,6 +135,9 @@ app.get("/register", (req, res) => {
   const user_id = req.cookies["user_id"];
   const user = users[user_id];
   const templateVars = { user: user };
+  if (typeof user !== "undefined") {
+    res.redirect("/urls");
+  }
   res.render("register", templateVars);
 });
 
@@ -155,5 +164,10 @@ app.post("/register",(req, res) => {
 });
 
 app.get("/login", (req, res) => {
+  const user_id = req.cookies["user_id"];
+  const user = users[user_id];
+  if (typeof user !== "undefined") {
+    res.redirect("/urls");
+  }
   res.render("login");
 });
