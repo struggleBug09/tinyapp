@@ -18,10 +18,19 @@ function generateRandomString() {
   return randomString;
 }
 
-const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com",
+function urlsForUser(id) {
+  
+}
 
+const urlDatabase = {
+  "b2xVn2": {
+    longURL: "http://www.lighthouselabs.ca",
+    userID: "ssp23"
+  },
+  "9sm5xK": {
+    longURL: "http://www.google.com",
+    userID: "ssp23"
+  },
 };
 
 let users = {};
@@ -52,6 +61,9 @@ app.get("/urls", (req, res) => {
     users: req.cookies["users"],
     user: user
   };
+  if (typeof user == "undefined") {
+    return res.status(401).send("<h1>Please login/register to shorten URLs</h1>");
+  }
   res.render("urls_index", templateVars);
   
 });
@@ -72,8 +84,13 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const id = generateRandomString();
+  const user_id = req.cookies["user_id"];
   const longURL = req.body.longURL;
-  urlDatabase[id] = longURL;
+  const user = users[user_id];
+  if (!urlDatabase[id]) {
+    urlDatabase[id] = {};
+  }
+  urlDatabase[id].longURL = longURL;
   if (typeof user == "undefined") {
     return res.status(401).send("<h1>Please login to shorten URLs</h1>");
   }
@@ -85,7 +102,7 @@ app.get("/urls/:id", (req, res) => {
   const user = users[user_id];
   const templateVars = { 
     id: req.params.id,
-    longURL: urlDatabase[req.params.id],
+    longURL: urlDatabase[req.params.id].longURL,  //check if this needs .longURL or not
     users: req.cookies["users"],
     user: user
   };
@@ -94,13 +111,13 @@ app.get("/urls/:id", (req, res) => {
 
 app.get("/u/:id", (req, res) => {
   const id = req.params.id;
-  const longURL = urlDatabase[id];
+  const longURL = urlDatabase[id].longURL;
   res.redirect(longURL);
 });
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
-  delete urlDatabase[id];
+  delete urlDatabase[id].longURL;
   res.redirect("/urls");
 });
 
