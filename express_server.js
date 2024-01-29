@@ -105,15 +105,24 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const username = req.body.username;
-  res.cookie("username", username);
-  res.redirect("/urls");
+  for (let uniqueID in users) {
+    if (users[uniqueID].email === req.body.email) {
+      if (users[uniqueID].password == req.body.password) {
+        let user_id = uniqueID;
+        res.cookie("user_id", user_id);
+        res.redirect("/urls");
+      } else {
+        return res.status(403).send("Please use the correct password.");
+      }
+    }
+  }
+  return res.status(403).send("Please use a valid email");
 });
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
   users = usersCopy;
-  res.redirect("/urls")
+  res.redirect("/login")
 });
 
 app.get("/register", (req, res) => {
