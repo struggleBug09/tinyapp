@@ -24,18 +24,8 @@ const urlDatabase = {
 
 };
 
-const users = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur",
-  },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk",
-  },
-};
+let users = {};
+let usersCopy = {};
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -122,6 +112,7 @@ app.post("/login", (req, res) => {
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
+  users = usersCopy;
   res.redirect("/urls")
 });
 
@@ -143,10 +134,17 @@ app.post("/register",(req, res) => {
   console.log("Current users object before registration:", users);
   const user_id = generateRandomString();
   users[user_id] = {
+    "id": user_id,
     "email": req.body.email,
-    "password": req.body.password,
+    "password": req.body.password
   }
-  console.log("Current users object before registration:", users);
+  usersCopy = users;
+  console.log("Current users object after registration:", users);
+  console.log("UsersCopy", usersCopy);
   res.cookie("user_id", user_id);
   res.redirect("/urls");
+});
+
+app.get("/login", (req, res) => {
+  res.render("login");
 });
