@@ -18,9 +18,9 @@ function generateRandomString() {
   return randomString;
 }
 
-function urlsForUser(id) {
-  
-}
+// function urlsForUser(id) {
+
+// }
 
 const urlDatabase = {
   "b2xVn2": {
@@ -91,9 +91,11 @@ app.post("/urls", (req, res) => {
     urlDatabase[id] = {};
   }
   urlDatabase[id].longURL = longURL;
+  urlDatabase[id].user_id = user_id;
   if (typeof user == "undefined") {
     return res.status(401).send("<h1>Please login to shorten URLs</h1>");
   }
+  console.log("urlDatabase", urlDatabase);
   res.redirect(`/urls/${id}`);
 });
 
@@ -117,13 +119,15 @@ app.get("/u/:id", (req, res) => {
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
-  delete urlDatabase[id].longURL;
+  delete urlDatabase[id];
   res.redirect("/urls");
 });
 
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
-  urlDatabase[id] = req.body.longURL;
+  urlDatabase[id] = {
+    longURL: req.body.longURL,
+  };
   res.redirect("/urls");
 });
 
