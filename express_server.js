@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const cookieParser = require("cookie-parser");
+const bcrypt = require("bcryptjs");
 
 app.use(cookieParser());
 app.set("view engine", "ejs");
@@ -17,7 +18,7 @@ function generateRandomString() {
   for (let i = 0; i < 6; i++) {
    randomLetter = letter[Math.floor(Math.random() * letter.length)];
    randomString += randomLetter;
-  }
+  };
   return randomString;
 }
 
@@ -152,8 +153,9 @@ app.post("/urls/:id", (req, res) => {
 
 app.post("/login", (req, res) => {
   for (let uniqueID in users) {
+    let hashedPassword = users[uniqueID].password;
     if (users[uniqueID].email === req.body.email) {
-      if (users[uniqueID].password == req.body.password) {
+      if (bcrypt.compareSync(req.body.password, hashedPassword)) {
         let userID = uniqueID;
         res.cookie("userID", userID);
         res.redirect("/urls");
@@ -190,12 +192,15 @@ app.post("/register",(req, res) => {
     return res.status(400).send("Please use a different email.");
   }
   const userID = generateRandomString();
+  const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10);
   users[userID] = {
     "id": userID,
     "email": req.body.email,
-    "password": req.body.password
+    "password": hashedPassword
   }
   usersCopy = users;
+  console.log("hashedPassword", hashedPassword)
   res.cookie("userID", userID);
   res.redirect("/urls");
 });
@@ -208,4 +213,5 @@ app.get("/login", (req, res) => {
   }
   res.render("login");
 });
+
 
