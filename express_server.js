@@ -18,9 +18,22 @@ function generateRandomString() {
   return randomString;
 }
 
-// function urlsForUser(id) {
-
-// }
+function urlsForUser(id) {
+  let urls = {};
+  for (let obj1 in urlDatabase) {
+    console.log("urlDatabase[obj1].userID",urlDatabase[obj1].user_id);
+    console.log("obj1", obj1);
+    console.log("id",id)
+    console.log("urlDatabase", urlDatabase)
+    if (urlDatabase[obj1].user_id === id) {
+      urls[obj1] = {
+        "longURL": urlDatabase[obj1].longURL,
+        "userID": urlDatabase[obj1].user_id
+      }
+    }
+  }
+  return urls;
+}
 
 const urlDatabase = {
   "b2xVn2": {
@@ -56,8 +69,10 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
   const user_id = req.cookies["user_id"];
   const user = users[user_id];
+  console.log(user_id);
+  console.log(urlsForUser(user_id));
   const templateVars = { 
-    urls: urlDatabase,
+    urls: urlsForUser(user_id),
     users: req.cookies["users"],
     user: user
   };
@@ -127,6 +142,7 @@ app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
   urlDatabase[id] = {
     longURL: req.body.longURL,
+    userID: req.cookies["user_id"];
   };
   res.redirect("/urls");
 });
