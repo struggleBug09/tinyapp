@@ -9,7 +9,6 @@ app.use(express.urlencoded({ extended: true }));
 
 let users = {};
 let usersCopy = {};
-let urls = {};
 
 function generateRandomString() {
   const letter = 'abcdefghijklmnopqrstuvwxyz';
@@ -23,15 +22,16 @@ function generateRandomString() {
 }
 
 function urlsForUser(id) {
+  let urlsObj = {};
   for (let obj1 in urlDatabase) {
-    if (urlDatabase[obj1].user_id === id) {
-      urls[obj1] = {
+    if (urlDatabase[obj1].userID === id) {
+      urlsObj[obj1] = {
         "longURL": urlDatabase[obj1].longURL,
-        "userID": urlDatabase[obj1].user_id
+        "userID": urlDatabase[obj1].userID
       }
     }
   }
-  return urls;
+  return urlsObj;
 }
 
 const urlDatabase = {
@@ -63,10 +63,10 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const user_id = req.cookies["user_id"];
-  const user = users[user_id];
+  const userID = req.cookies["userID"];
+  const user = users[userID];
   const templateVars = { 
-    urls: urlsForUser(user_id),
+    urls: urlsForUser(userID),
     users: req.cookies["users"],
     user: user
   };
@@ -78,10 +78,10 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const user_id = req.cookies["user_id"];
-  const user = users[user_id];
+  const userID = req.cookies["userID"];
+  const user = users[userID];
   const templateVars = { 
-    urls: urlDatabase,
+    "urls": urlsForUser(userID),
     users: req.cookies["users"],
     user: user
   };
@@ -93,14 +93,14 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const id = generateRandomString();
-  const user_id = req.cookies["user_id"];
+  const userID = req.cookies["userID"];
   const longURL = req.body.longURL;
-  const user = users[user_id];
+  const user = users[userID];
   if (!urlDatabase[id]) {
     urlDatabase[id] = {};
   }
   urlDatabase[id].longURL = longURL;
-  urlDatabase[id].user_id = user_id;
+  urlDatabase[id].userID = userID;
   if (typeof user == "undefined") {
     return res.status(401).send("<h1>Please login to shorten URLs</h1>");
   }
@@ -108,8 +108,8 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const user_id = req.cookies["user_id"];
-  const user = users[user_id];
+  const userID = req.cookies["userID"];
+  const user = users[userID];
   const templateVars = { 
     id: req.params.id,
     longURL: urlDatabase[req.params.id].longURL,
@@ -127,22 +127,26 @@ app.get("/u/:id", (req, res) => {
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
+  const userID = req.cookies["userID"];
+  urls = urlsForUser(userID);
   delete urlDatabase[id];
+  delete urls[id];
   res.redirect("/urls");
 });
 
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
-  console.log("urls", urls)
+  const userID = req.cookies["userID"];
   urlDatabase[id] = {
     longURL: req.body.longURL,
-    "userID": urlDatabase[id].user_id
+    "userID": userID
   };
-  urlDatabase[id] = {
+  urls = urlsForUser(userID);
+  urls[id] = {
     longURL: req.body.longURL,
-    "userID": urlDatabase[id].user_id
+    "userID": userID
   };
-  console.log("AFTER urlDatabase", urlDatabase)
+  console.log(urlDatabase);
   res.redirect("/urls");
 });
 
@@ -150,8 +154,8 @@ app.post("/login", (req, res) => {
   for (let uniqueID in users) {
     if (users[uniqueID].email === req.body.email) {
       if (users[uniqueID].password == req.body.password) {
-        let user_id = uniqueID;
-        res.cookie("user_id", user_id);
+        let userID = uniqueID;
+        res.cookie("userID", userID);
         res.redirect("/urls");
       } else {
         return res.status(403).send("Please use the correct password.");
@@ -162,14 +166,14 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  res.clearCookie("userID");
   users = usersCopy;
   res.redirect("/login")
 });
 
 app.get("/register", (req, res) => {
-  const user_id = req.cookies["user_id"];
-  const user = users[user_id];
+  const userID = req.cookies["userID"];
+  const user = users[userID];
   const templateVars = { user: user };
   if (typeof user !== "undefined") {
     res.redirect("/urls");
@@ -185,22 +189,23 @@ app.post("/register",(req, res) => {
   if (getUserByEmail) {
     return res.status(400).send("Please use a different email.");
   }
-  const user_id = generateRandomString();
-  users[user_id] = {
-    "id": user_id,
+  const userID = generateRandomString();
+  users[userID] = {
+    "id": userID,
     "email": req.body.email,
     "password": req.body.password
   }
   usersCopy = users;
-  res.cookie("user_id", user_id);
+  res.cookie("userID", userID);
   res.redirect("/urls");
 });
 
 app.get("/login", (req, res) => {
-  const user_id = req.cookies["user_id"];
-  const user = users[user_id];
+  const userID = req.cookies["userID"];
+  const user = users[userID];
   if (typeof user !== "undefined") {
     res.redirect("/urls");
   }
   res.render("login");
 });
+
