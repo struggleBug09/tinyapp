@@ -3,6 +3,7 @@ const app = express();
 const PORT = 8080;
 const cookieParser = require("cookie-parser");
 const bcrypt = require("bcryptjs");
+const { getUserByEmail } = require("./helpers.js");
 
 app.use(cookieParser());
 app.set("view engine", "ejs");
@@ -152,19 +153,16 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  for (let uniqueID in users) {
-    let hashedPassword = users[uniqueID].password;
-    if (users[uniqueID].email === req.body.email) {
-      if (bcrypt.compareSync(req.body.password, hashedPassword)) {
-        let userID = uniqueID;
-        res.cookie("userID", userID);
-        res.redirect("/urls");
-      } else {
-        return res.status(403).send("Please use the correct password.");
-      }
-    }
+  const user = getUserByEmail(req.body.email, users);
+  if (!user) {
+    return res.status(403).send("Please use a valid email");
   }
-  return res.status(403).send("Please use a valid email");
+  if (bcrypt.compareSync(req.body.password, user.password)) {
+    res.cookie("userID", user.id);
+    res.redirect("/urls");
+  } else {
+    return res.status(403).send("Please use the correct password.");
+  }
 });
 
 app.post("/logout", (req, res) => {
@@ -187,8 +185,8 @@ app.post("/register",(req, res) => {
   if (!req.body.email || !req.body.password) {
     return res.status(400).send("Please fill out both email and password section.");
   }
-  const getUserByEmail = Object.values(users).some(user => user.email === req.body.email);
-  if (getUserByEmail) {
+  const existingUser = getUserByEmail(req.body.email, users);
+  if (existingUser) {
     return res.status(400).send("Please use a different email.");
   }
   const userID = generateRandomString();
