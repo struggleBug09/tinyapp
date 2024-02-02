@@ -1,11 +1,15 @@
 const express = require("express");
 const app = express();
 const PORT = 8080;
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
 const bcrypt = require("bcryptjs");
 const { getUserByEmail } = require("./helpers.js");
+const secretKey = generateRandomString();
 
-app.use(cookieParser());
+app.use(cookieSession({
+  name: 'session',
+  keys: [secretKey]
+}));
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 
@@ -65,11 +69,11 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   const user = users[userID];
   const templateVars = { 
     urls: urlsForUser(userID),
-    users: req.cookies["users"],
+    users: req.session["users"],
     user: user
   };
   if (typeof user == "undefined") {
@@ -80,11 +84,11 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   const user = users[userID];
   const templateVars = { 
     "urls": urlsForUser(userID),
-    users: req.cookies["users"],
+    users: req.session["users"],
     user: user
   };
   if (typeof user == "undefined") {
@@ -95,7 +99,7 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls", (req, res) => {
   const id = generateRandomString();
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   const longURL = req.body.longURL;
   const user = users[userID];
   if (!urlDatabase[id]) {
@@ -110,12 +114,12 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   const user = users[userID];
   const templateVars = { 
     id: req.params.id,
     longURL: urlDatabase[req.params.id].longURL,
-    users: req.cookies["users"],
+    users: req.session["users"],
     user: user
   };
   res.render("urls_show", templateVars);
@@ -129,7 +133,7 @@ app.get("/u/:id", (req, res) => {
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   urls = urlsForUser(userID);
   delete urlDatabase[id];
   delete urls[id];
@@ -138,7 +142,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   urlDatabase[id] = {
     longURL: req.body.longURL,
     "userID": userID
@@ -148,7 +152,6 @@ app.post("/urls/:id", (req, res) => {
     longURL: req.body.longURL,
     "userID": userID
   };
-  console.log(urlDatabase);
   res.redirect("/urls");
 });
 
@@ -158,7 +161,7 @@ app.post("/login", (req, res) => {
     return res.status(403).send("Please use a valid email");
   }
   if (bcrypt.compareSync(req.body.password, user.password)) {
-    res.cookie("userID", user.id);
+    req.session.userID = user.id;
     res.redirect("/urls");
   } else {
     return res.status(403).send("Please use the correct password.");
@@ -166,13 +169,13 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("userID");
+  req.session = null;
   users = usersCopy;
   res.redirect("/login")
 });
 
 app.get("/register", (req, res) => {
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   const user = users[userID];
   const templateVars = { user: user };
   if (typeof user !== "undefined") {
@@ -198,13 +201,12 @@ app.post("/register",(req, res) => {
     "password": hashedPassword
   }
   usersCopy = users;
-  console.log("hashedPassword", hashedPassword)
-  res.cookie("userID", userID);
+  req.session.userID = userID;
   res.redirect("/urls");
 });
 
 app.get("/login", (req, res) => {
-  const userID = req.cookies["userID"];
+  const userID = req.session["userID"];
   const user = users[userID];
   if (typeof user !== "undefined") {
     res.redirect("/urls");
