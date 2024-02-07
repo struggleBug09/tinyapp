@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 let users = {};
-let usersCopy = {};
+
 
 function generateRandomString() {
   const letter = 'abcdefghijklmnopqrstuvwxyz';
@@ -53,7 +53,13 @@ const urlDatabase = {
 };
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  const userID = req.session["userID"];
+  const user = users[userID];
+  if (typeof user !== "undefined") {
+    res.redirect("/urls");
+  }
+  res.render("login");
+
 });
 
 app.listen(PORT, () => {
@@ -117,12 +123,27 @@ app.post("/urls", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const userID = req.session["userID"];
   const user = users[userID];
+  const id = req.params.id;
+  //This checks if the url exists in the database and sends an error msg if not
+  if (!urlDatabase[id]) {
+    return res.status(403).send("This link is invalid");
+  }
+  //Error message if user is not logged in
+  if (typeof user == "undefined") {
+    return res.status(401).send("<h1>Please login to shorten URLs</h1>");
+  }
+  //Error message if user is logged in but not owner of link
+  if (typeof user == "undefined") {
+    return res.status(401).send("<h1>Please login to shorten URLs</h1>");
+  }
   const templateVars = { 
-    id: req.params.id,
+    id: id,
     longURL: urlDatabase[req.params.id].longURL,
     users: req.session["users"],
     user: user
   };
+  
+
   res.render("urls_show", templateVars);
 });
 
@@ -171,7 +192,6 @@ app.post("/login", (req, res) => {
 
 app.post("/logout", (req, res) => {
   req.session = null;
-  users = usersCopy;
   res.redirect("/login")
 });
 
@@ -201,7 +221,6 @@ app.post("/register",(req, res) => {
     "email": req.body.email,
     "password": hashedPassword
   }
-  usersCopy = users;
   req.session.userID = userID;
   res.redirect("/urls");
 });
