@@ -41,17 +41,9 @@ function urlsForUser(id) {
   return urlsObj;
 }
 
-const urlDatabase = {
-  "b2xVn2": {
-    longURL: "http://www.lighthouselabs.ca",
-    userID: "ssp23"
-  },
-  "9sm5xK": {
-    longURL: "http://www.google.com",
-    userID: "ssp23"
-  },
-};
+const urlDatabase = {};
 
+//Early 'to do' from exercise. Can be removed, but not explicitely told
 app.get("/", (req, res) => {
   const userID = req.session["userID"];
   const user = users[userID];
@@ -66,10 +58,12 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+//Early 'to do' from exercise. Can be removed, but not explicitely told
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+//Early 'to do' from exercise. Can be removed, but not explicitely told
 app.get("/hello", (req, res) => {
   const templateVars = { greeting: "Hello World!" };
   res.render("hello_world", templateVars);
@@ -78,6 +72,7 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
   const userID = req.session["userID"];
   const user = users[userID];
+   //Makes sure we only send user specific urls to templateVars with urlsForUser function
   const templateVars = { 
     urls: urlsForUser(userID),
     users: req.session["users"],
@@ -93,11 +88,13 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const userID = req.session["userID"];
   const user = users[userID];
+  //Same as GET/urls for data we're passing to templateVars
   const templateVars = { 
     "urls": urlsForUser(userID),
     users: req.session["users"],
     user: user
   };
+  //Redirects if the user is not logged in
   if (typeof user == "undefined") {
     res.redirect("/login");
   }
@@ -105,18 +102,19 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+  //Adds our data to our database with our current session
   const id = generateRandomString();
   const userID = req.session["userID"];
   const longURL = req.body.longURL;
   const user = users[userID];
-  if (!urlDatabase[id]) {
-    urlDatabase[id] = {};
-  }
-  urlDatabase[id].longURL = longURL;
-  urlDatabase[id].userID = userID;
-  if (typeof user == "undefined") {
+  urlDatabase[id] = {
+    longURL: longURL,
+    userID: userID
+  };
+  if (typeof user === "undefined") {
     return res.status(401).send("<h1>Please login to shorten URLs</h1>");
   }
+
   res.redirect(`/urls/${id}`);
 });
 
@@ -126,15 +124,15 @@ app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   //This checks if the url exists in the database and sends an error msg if not
   if (!urlDatabase[id]) {
-    return res.status(403).send("This link is invalid");
+    return res.status(403).send("<h1>This link does not exist</h1>");
   }
   //Error message if user is not logged in
   if (typeof user == "undefined") {
-    return res.status(401).send("<h1>Please login to shorten URLs</h1>");
+    return res.status(401).send("<h1>Please log in. This link is invalid</h1>");
   }
   //Error message if user is logged in but not owner of link
-  if (typeof user == "undefined") {
-    return res.status(401).send("<h1>Please login to shorten URLs</h1>");
+  if (urlDatabase[id].userID !== userID) {
+    return res.status(401).send("<h1>You do not have access to this page</h1>");
   }
   const templateVars = { 
     id: id,
@@ -142,21 +140,27 @@ app.get("/urls/:id", (req, res) => {
     users: req.session["users"],
     user: user
   };
-  
-
   res.render("urls_show", templateVars);
 });
 
 app.get("/u/:id", (req, res) => {
   const id = req.params.id;
-  const longURL = urlDatabase[id].longURL;
-  res.redirect(longURL);
+  console.log("Requested id:", id);
+  
+  // Check if id exists in urlDatabase
+  if (urlDatabase[id] && urlDatabase[id].longURL) {
+    const longURL = urlDatabase[id].longURL;
+    res.redirect(longURL);
+  } else {
+    res.status(404).send("<h1>URL not found</h1>");
+  }
 });
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
   const userID = req.session["userID"];
   urls = urlsForUser(userID);
+  //Remove data from database
   delete urlDatabase[id];
   delete urls[id];
   res.redirect("/urls");
@@ -179,9 +183,11 @@ app.post("/urls/:id", (req, res) => {
 
 app.post("/login", (req, res) => {
   const user = getUserByEmail(req.body.email, users);
+  //Checks if email exists in the database, returns an error if not
   if (!user) {
     return res.status(403).send("Please use a valid email");
   }
+  //Redirects to urls on a successful login
   if (bcrypt.compareSync(req.body.password, user.password)) {
     req.session.userID = user.id;
     res.redirect("/urls");
@@ -199,6 +205,7 @@ app.get("/register", (req, res) => {
   const userID = req.session["userID"];
   const user = users[userID];
   const templateVars = { user: user };
+  //If user is already logged in, will redirect to /urls
   if (typeof user !== "undefined") {
     res.redirect("/urls");
   }
@@ -206,13 +213,16 @@ app.get("/register", (req, res) => {
 });
 
 app.post("/register",(req, res) => {
+  //Returns error if email/password are not filled out
   if (!req.body.email || !req.body.password) {
     return res.status(400).send("Please fill out both email and password section.");
   }
   const existingUser = getUserByEmail(req.body.email, users);
+  //Returns error if user is loggin in with an existing email with wrong password
   if (existingUser) {
     return res.status(400).send("Please use a different email.");
   }
+  //Generates the user and saves the user data
   const userID = generateRandomString();
   const password = req.body.password;
   const hashedPassword = bcrypt.hashSync(password, 10);
@@ -221,6 +231,7 @@ app.post("/register",(req, res) => {
     "email": req.body.email,
     "password": hashedPassword
   }
+  //Sets our session and redirects to /urls
   req.session.userID = userID;
   res.redirect("/urls");
 });
@@ -228,6 +239,7 @@ app.post("/register",(req, res) => {
 app.get("/login", (req, res) => {
   const userID = req.session["userID"];
   const user = users[userID];
+  //Redirects to urls if user is already logged in
   if (typeof user !== "undefined") {
     res.redirect("/urls");
   }
